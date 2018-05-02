@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Game1
+namespace KinectArucoTracking
 {
     public static class Program
     {
@@ -10,7 +10,7 @@ namespace Game1
         [STAThread]
         static void Main()
         {
-            using (var game = new Game1())
+            using (var game = new KinectArucoTracking())
                 game.Run();
         }
     }

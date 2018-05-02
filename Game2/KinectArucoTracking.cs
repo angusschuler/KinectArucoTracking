@@ -1,15 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 
-namespace Game1
+namespace KinectArucoTracking
 {
 
-    public class Game1 : Game
+    public class KinectArucoTracking : Game
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
@@ -32,7 +28,7 @@ namespace Game1
 
         FormVideoCapture capture;
 
-        public Game1()
+        public KinectArucoTracking()
         {
             graphics = new GraphicsDeviceManager(this);
             graphics.PreferredBackBufferHeight = 1080;
