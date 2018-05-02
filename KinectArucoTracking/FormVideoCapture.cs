@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using Emgu.CV;
 using Emgu.CV.Aruco;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using Microsoft.Kinect;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace KinectArucoTracking
 {
     public class FormVideoCapture
     {
-        KinectSensor _sensor;
-        ColorFrameReader _rgbReader;
+        private VideoCapture _capture = null;
 
         int calibrated = 0;
 
@@ -22,6 +21,9 @@ namespace KinectArucoTracking
 
         private Dictionary _dict;
         private DetectorParameters _detectorParameters;
+
+        private Mat _frame = new Mat();
+        Mat _frameCopy = new Mat();
 
         Mat _cameraMatrix = new Mat();
         Mat _distCoeffs = new Mat();
@@ -53,37 +55,38 @@ namespace KinectArucoTracking
 
         private bool calibrate = false;
 
-        Texture2D background;
-        GraphicsDevice graphicsDevice;
+        private Texture2D background;
+        private GraphicsDevice graphicsDevice;
 
-        int frameCount = 0;
-
-        Texture2D bit;
-
-        public void InitKinect()
+        public void InitCapture()
         {
-            _sensor = KinectSensor.GetDefault();
-            //_sensor.ColorFrameSource.CreateFrameDescription(ColorImageFormat.Bgra);
-            _rgbReader = _sensor.ColorFrameSource.OpenReader();
-            //_rgbReader = _sensor.ColorFrameSource.OpenReader();
-            _rgbReader.FrameArrived += rgbReader_FrameArrived;
-            _sensor.Open();
             _detectorParameters = DetectorParameters.GetDefault();
+
+            try
+            {
+                _capture = new VideoCapture();
+                if (!_capture.IsOpened)
+                {
+                    _capture = null;
+                    throw new NullReferenceException("Unable to open video capture");
+                }
+                else
+                {
+                    _capture.ImageGrabbed += ImageArrived;
+                }
+            }
+            catch (NullReferenceException excpt)
+            {
+
+            }
         }
 
         public FormVideoCapture(Texture2D background, GraphicsDevice graphicsDevice)
         {
-            //InitializeComponent();
             this.background = background;
             this.graphicsDevice = graphicsDevice;
-            InitKinect();
+            InitCapture();
         }
-
-        //private void FormVideoCapture_Load(object sender, EventArgs e)
-        //{
-        //    InitKinect();
-
-        //}
 
         private Dictionary ArucoDictionary
         {
@@ -96,98 +99,89 @@ namespace KinectArucoTracking
 
         }
 
-        void rgbReader_FrameArrived(object sender, ColorFrameArrivedEventArgs e)
+        void ImageArrived(object sender, EventArgs e)
         {
-            using (var frame = e.FrameReference.AcquireFrame())
+            
+            if (_capture != null && _capture.Ptr != IntPtr.Zero)
             {
-                if (frame != null)
+                
+                _capture.Retrieve(_frame);
+                _frame.CopyTo(_frameCopy);
+                //var image = _frameCopy.ToImage<Bgr, byte>();
+
+              
+                using (VectorOfInt ids = new VectorOfInt())
+                using (VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF())
+                using (VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF())
                 {
+                    ArucoInvoke.DetectMarkers(_frameCopy, ArucoDictionary, corners, ids, _detectorParameters, rejected);
 
-                    var width = frame.FrameDescription.Width;
-                    var height = frame.FrameDescription.Height;
-                    var bitmap = frame.ToBitmap();
-                    var image = bitmap.ToOpenCVImage<Bgr, byte>().Mat;
-
-                    //do something here with the IImage       
-
-                    int frameSkip = 1;
-                    //every 10 frames
-
-                    if (++frameCount == frameSkip)
+                    if (ids.Size > 0)
                     {
-                        frameCount = 0;
-                        using (VectorOfInt ids = new VectorOfInt())
-                        using (VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF())
-                        using (VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF())
+                        ArucoInvoke.RefineDetectedMarkers(_frameCopy, ArucoBoard, corners, ids, rejected, null, null,
+                            10, 3, true, null, _detectorParameters);
+
+                        ArucoInvoke.DrawDetectedMarkers(_frameCopy, corners, ids, new MCvScalar(0, 255, 0));
+
+                        if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
                         {
-                            ArucoInvoke.DetectMarkers(image, ArucoDictionary, corners, ids, _detectorParameters, rejected);
-
-                            if (ids.Size > 0)
+                            ArucoInvoke.EstimatePoseSingleMarkers(corners, markersLength, _cameraMatrix, _distCoeffs,
+                                rvecs, tvecs);
+                            for (int i = 0; i < ids.Size; i++)
                             {
-                                ArucoInvoke.RefineDetectedMarkers(image, ArucoBoard, corners, ids, rejected, null, null, 10, 3, true, null, _detectorParameters);
-
-                                ArucoInvoke.DrawDetectedMarkers(image, corners, ids, new MCvScalar(0, 255, 0));
-
-                                if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
+                                using (Mat rvecmat = rvecs.Row(i))
+                                using (Mat tvecmat = tvecs.Row(i))
+                                using (VectorOfDouble rvec = new VectorOfDouble())
+                                using (VectorOfDouble tvec = new VectorOfDouble())
                                 {
-                                    ArucoInvoke.EstimatePoseSingleMarkers(corners, markersLength, _cameraMatrix, _distCoeffs, rvecs, tvecs);
-                                    for (int i = 0; i < ids.Size; i++)
-                                    {
-                                        using (Mat rvecmat = rvecs.Row(i))
-                                        using (Mat tvecmat = tvecs.Row(i))
-                                        using (VectorOfDouble rvec = new VectorOfDouble())
-                                        using (VectorOfDouble tvec = new VectorOfDouble())
-                                        {
-                                            double[] values = new double[3];
-                                            rvecmat.CopyTo(values);
-                                            rvec.Push(values);
-                                            tvecmat.CopyTo(values);
-                                            tvec.Push(values);
+                                    double[] values = new double[3];
+                                    rvecmat.CopyTo(values);
+                                    rvec.Push(values);
+                                    tvecmat.CopyTo(values);
+                                    tvec.Push(values);
 
-                                            ArucoInvoke.DrawAxis(image, _cameraMatrix, _distCoeffs, rvec, tvec,
-                                                markersLength * 0.5f);
-                                        }
-                                    }
-                                }
-
-                                if (calibrate)
-                                {
-                                    _allCorners.Push(corners);
-                                    _allIds.Push(ids);
-                                    _markerCounterPerFrame.Push(new int[] { corners.Size });
-                                    _imageSize = image.Size;
-                                    calibrated += 1;
-
-                                    if (calibrated >= calibrationFreq)
-                                    {
-                                        calibrate = false;
-                                    }
-                                }
-
-                                int totalPoints = _markerCounterPerFrame.ToArray().Sum();
-                                if (calibrated >= calibrationFreq && totalPoints > 0)
-                                {
-
-                                    ArucoInvoke.CalibrateCameraAruco(_allCorners, _allIds, _markerCounterPerFrame, ArucoBoard, _imageSize,
-                                        _cameraMatrix, _distCoeffs, null, null, CalibType.Default, new MCvTermCriteria(30, double.Epsilon));
-
-                                    _allCorners.Clear();
-                                    _allIds.Clear();
-                                    _markerCounterPerFrame.Clear();
-                                    _imageSize = System.Drawing.Size.Empty;
-                                    calibrated = 0;
-                                    Console.WriteLine("Calibrated");
+                                    ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
+                                        markersLength * 0.5f);
                                 }
                             }
                         }
-                    }
-                    //end doing something
 
-                    this.background = image.Bitmap.XNATextureFromBitmap(background);
-                    bitmap.Dispose();
-                    image.Dispose();
+                        if (calibrate)
+                        {
+                            _allCorners.Push(corners);
+                            _allIds.Push(ids);
+                            _markerCounterPerFrame.Push(new int[] {corners.Size});
+                            _imageSize = _frameCopy.Size;
+                            calibrated += 1;
+
+                            if (calibrated >= calibrationFreq)
+                            {
+                                calibrate = false;
+                            }
+                        }
+
+                        int totalPoints = _markerCounterPerFrame.ToArray().Sum();
+                        if (calibrated >= calibrationFreq && totalPoints > 0)
+                        {
+
+                            ArucoInvoke.CalibrateCameraAruco(_allCorners, _allIds, _markerCounterPerFrame, ArucoBoard,
+                                _imageSize,
+                                _cameraMatrix, _distCoeffs, null, null, CalibType.Default,
+                                new MCvTermCriteria(30, double.Epsilon));
+
+                            _allCorners.Clear();
+                            _allIds.Clear();
+                            _markerCounterPerFrame.Clear();
+                            _imageSize = System.Drawing.Size.Empty;
+                            calibrated = 0;
+                            Console.WriteLine("Calibrated");
+                        }
+                    }
+
+                    this.background = _frameCopy.Bitmap.XNATextureFromBitmap(background);
                 }
             }
+            
         }
 
         public Texture2D getBackground()
@@ -197,23 +191,38 @@ namespace KinectArucoTracking
 
         public void closeCapture()
         {
-            if (this._rgbReader != null)
-            {
-                // ColorFrameReder is IDisposable
-                this._rgbReader.Dispose();
-                this._rgbReader = null;
-            }
+            //if (this._rgbReader != null)
+            //{
+            //    // ColorFrameReder is IDisposable
+            //    this._rgbReader.Dispose();
+            //    this._rgbReader = null;
+            //}
 
-            if (this._sensor != null)
-            {
-                this._sensor.Close();
-                this._sensor = null;
-            }
+            //if (this._sensor != null)
+            //{
+            //    this._sensor.Close();
+            //    this._sensor = null;
+            //}
         }
 
         private void calibrateToolStripMenuItem_Click(object sender, EventArgs e)
         {
             calibrate = true;
+        }
+
+        public VideoCapture getCapture()
+        {
+            return _capture;
+        }
+
+        public void startCapture()
+        {
+            _capture.Start();
+        }
+
+        public void SetTexture(Texture2D texture)
+        {
+            this.background = texture;
         }
     }
 }

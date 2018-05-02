@@ -61,11 +61,20 @@ namespace KinectArucoTracking
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            background = new Texture2D(GraphicsDevice, 1920, 1080);// GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height); // Size of Kinect Stream 1920x1080. Graphics Viewport is 800x640
-
             capture = new FormVideoCapture(background, GraphicsDevice);
 
+            while (capture.getCapture() == null)
+            {
+
+            }
+            
+            background = new Texture2D(GraphicsDevice, capture.getCapture().Width, capture.getCapture().Height); // Size of Kinect Stream 1920x1080. Graphics Viewport is 800x640
+
+            capture.SetTexture(background);
+
             mainFrame = new Microsoft.Xna.Framework.Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
+
+            capture.startCapture();
         }
 
         protected override void Update(GameTime gameTime)
