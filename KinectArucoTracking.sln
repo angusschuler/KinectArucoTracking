@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinectArucoTracking", "Game2\KinectArucoTracking.csproj", "{E47764F4-00CC-4D4A-B7B9-5D7E26A0E77E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinectArucoTracking", "KinectArucoTracking\KinectArucoTracking.csproj", "{E47764F4-00CC-4D4A-B7B9-5D7E26A0E77E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
