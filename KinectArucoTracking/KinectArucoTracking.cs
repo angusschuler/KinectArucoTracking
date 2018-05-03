@@ -1,4 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using System.Collections.Generic;
+using Emgu.CV;
+using KinectArucoTracking.Controls;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -28,6 +32,8 @@ namespace KinectArucoTracking
 
         FormVideoCapture capture;
 
+        private List<Component> _gameComponents;
+
         public KinectArucoTracking()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -38,7 +44,8 @@ namespace KinectArucoTracking
 
         protected override void Initialize()
         {
-            base.Initialize();
+
+            IsMouseVisible = true;
 
             //Setup Camera
             camTarget = new Vector3(0f, 0f, 0f);
@@ -54,8 +61,8 @@ namespace KinectArucoTracking
 
             model = Content.Load<Model>("MonoCube");
 
-            
-        }        
+            base.Initialize();
+        }
 
         protected override void LoadContent()
         {
@@ -67,6 +74,20 @@ namespace KinectArucoTracking
             {
 
             }
+
+            var button = new Button(Content.Load<Texture2D>("Controls/Button"), Content.Load<SpriteFont>("Fonts/font"))
+            {
+                Position = new Vector2(5, 5),
+                Text = "Calibrate",
+                PenColor = Color.Black
+            };
+
+            button.Click += Button_Click;
+
+            _gameComponents = new List<Component>()
+            {
+                button
+            };
             
             background = new Texture2D(GraphicsDevice, capture.getCapture().Width, capture.getCapture().Height); // Size of Kinect Stream 1920x1080. Graphics Viewport is 800x640
 
@@ -77,8 +98,30 @@ namespace KinectArucoTracking
             capture.startCapture();
         }
 
+        private void Button_Click(object sender, EventArgs e)
+        {
+            Console.WriteLine("Clicked");
+            capture.calibrateCamera();
+        }
+
+
         protected override void Update(GameTime gameTime)
         {
+
+            if (orbit)
+            {
+                //                Matrix rotationMatrix = Matrix.CreateRotationY(
+                //                                        MathHelper.ToRadians(1f));
+                Mat rvec = capture.getRvecs().Row(0);
+                float[] values = new float[3];
+                rvec.CopyTo(values);
+
+                Console.WriteLine(String.Format("Rotation: x:{0} y:{1} z:{2}", values[0], values[1], values[2]));
+                Matrix rotationMatrix = Matrix.CreateFromYawPitchRoll(MathHelper.ToRadians(values[1]), MathHelper.ToRadians(values[0]), MathHelper.ToRadians(values[2]));//values[0], values[1], values[2]);
+                camPosition = Vector3.Transform(camPosition,
+                    rotationMatrix);
+            }
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back ==
                 ButtonState.Pressed || Keyboard.GetState().IsKeyDown(
                 Keys.Escape))
@@ -117,19 +160,20 @@ namespace KinectArucoTracking
                 orbit = !orbit;
             }
 
-            if (orbit)
-            {
-                Matrix rotationMatrix = Matrix.CreateRotationY(
-                                        MathHelper.ToRadians(1f));
-                camPosition = Vector3.Transform(camPosition,
-                              rotationMatrix);
-            }
+            
+
             viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
                          Vector3.Up);
+
+            foreach (var component in _gameComponents)
+            {
+                component.Update(gameTime);
+            }
 
             graphics.ApplyChanges();
             base.Update(gameTime);
         }
+
 
         protected override void Draw(GameTime gameTime)
         {
@@ -141,6 +185,12 @@ namespace KinectArucoTracking
             {
                 spriteBatch.Draw(background, mainFrame, Microsoft.Xna.Framework.Color.White);
             }
+
+            foreach (var component in _gameComponents)
+            {
+                component.Draw(gameTime, spriteBatch);
+            }
+
             spriteBatch.End();
 
 

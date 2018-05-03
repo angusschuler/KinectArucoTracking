@@ -17,7 +17,7 @@ namespace KinectArucoTracking
 
         int calibrated = 0;
 
-        int calibrationFreq = 10;
+        int calibrationFreq = 40;
 
         private Dictionary _dict;
         private DetectorParameters _detectorParameters;
@@ -99,6 +99,7 @@ namespace KinectArucoTracking
 
         }
 
+
         void ImageArrived(object sender, EventArgs e)
         {
             
@@ -140,7 +141,7 @@ namespace KinectArucoTracking
                                     tvecmat.CopyTo(values);
                                     tvec.Push(values);
 
-                                    ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
+                                    if(ids[i] == 5) ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
                                         markersLength * 0.5f);
                                 }
                             }
@@ -223,6 +224,16 @@ namespace KinectArucoTracking
         public void SetTexture(Texture2D texture)
         {
             this.background = texture;
+        }
+
+        public void calibrateCamera()
+        {
+            calibrate = true;
+        }
+
+        public Mat getRvecs()
+        {
+            return rvecs;
         }
     }
 }
