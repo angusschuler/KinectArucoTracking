@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Emgu.CV;
 using KinectArucoTracking.Controls;
 using Microsoft.Xna.Framework;
@@ -30,20 +31,29 @@ namespace KinectArucoTracking
         //Orbit
         bool orbit = false;
 
+        private float sizeHalf = 250 / 2;
+        private Vector3[] glyphModel;
+
         FormVideoCapture capture;
 
         private List<Component> _gameComponents;
 
+        private Stopwatch timer = new Stopwatch();
+        private Matrix past_translation = Matrix.CreateTranslation(0, 0, 0);
+
         public KinectArucoTracking()
         {
             graphics = new GraphicsDeviceManager(this);
-            graphics.PreferredBackBufferHeight = 1080;
-            graphics.PreferredBackBufferWidth = 1920;
+//            graphics.PreferredBackBufferHeight = 1080;
+//            graphics.PreferredBackBufferWidth = 1920;
             Content.RootDirectory = "Content";
         }
 
         protected override void Initialize()
         {
+            base.Initialize();
+
+            timer.Start();
 
             IsMouseVisible = true;
 
@@ -61,7 +71,13 @@ namespace KinectArucoTracking
 
             model = Content.Load<Model>("MonoCube");
 
-            base.Initialize();
+            glyphModel = new Vector3[]
+            {
+                new Vector3( -sizeHalf, 0,  sizeHalf ),
+                new Vector3(  sizeHalf, 0,  sizeHalf ),
+                new Vector3(  sizeHalf, 0, -sizeHalf ),
+                new Vector3( -sizeHalf, 0, -sizeHalf ),
+            };
         }
 
         protected override void LoadContent()
@@ -82,8 +98,6 @@ namespace KinectArucoTracking
                 PenColor = Color.Black
             };
 
-            button.Click += Button_Click;
-
             _gameComponents = new List<Component>()
             {
                 button
@@ -93,78 +107,22 @@ namespace KinectArucoTracking
 
             capture.SetTexture(background);
 
-            mainFrame = new Microsoft.Xna.Framework.Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
+            mainFrame = new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
 
             capture.startCapture();
         }
 
-        private void Button_Click(object sender, EventArgs e)
-        {
-            Console.WriteLine("Clicked");
-            capture.calibrateCamera();
-        }
-
-
         protected override void Update(GameTime gameTime)
         {
-
-            if (orbit)
-            {
-                //                Matrix rotationMatrix = Matrix.CreateRotationY(
-                //                                        MathHelper.ToRadians(1f));
-                Mat rvec = capture.getRvecs().Row(0);
-                float[] values = new float[3];
-                rvec.CopyTo(values);
-
-                Console.WriteLine(String.Format("Rotation: x:{0} y:{1} z:{2}", values[0], values[1], values[2]));
-                Matrix rotationMatrix = Matrix.CreateFromYawPitchRoll(MathHelper.ToRadians(values[1]), MathHelper.ToRadians(values[0]), MathHelper.ToRadians(values[2]));//values[0], values[1], values[2]);
-                camPosition = Vector3.Transform(camPosition,
-                    rotationMatrix);
-            }
-
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back ==
                 ButtonState.Pressed || Keyboard.GetState().IsKeyDown(
                 Keys.Escape))
                 Exit();
 
-            if (Keyboard.GetState().IsKeyDown(Keys.Left))
-            {
-                camPosition.X -= 0.1f;
-                camTarget.X -= 0.1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Right))
-            {
-                camPosition.X += 0.1f;
-                camTarget.X += 0.1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Up))
-            {
-                camPosition.Y -= 0.1f;
-                camTarget.Y -= 0.1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Down))
-            {
-                camPosition.Y += 0.1f;
-                camTarget.Y += 0.1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.OemPlus))
-            {
-                camPosition.Z += 0.1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.OemMinus))
-            {
-                camPosition.Z -= 0.1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Space))
-            {
-                orbit = !orbit;
-            }
-
-            
-
-            viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
-                         Vector3.Up);
-
+            if (Keyboard.GetState().IsKeyDown(Keys.Tab))
+                Console.WriteLine("Clicked");
+                capture.calibrateCamera();
+           
             foreach (var component in _gameComponents)
             {
                 component.Update(gameTime);
@@ -177,7 +135,7 @@ namespace KinectArucoTracking
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Microsoft.Xna.Framework.Color.White);
+            GraphicsDevice.Clear(Color.White);
             
             spriteBatch.Begin();
             background = capture.getBackground();
@@ -188,14 +146,66 @@ namespace KinectArucoTracking
 
             foreach (var component in _gameComponents)
             {
-                component.Draw(gameTime, spriteBatch);
+//                component.Draw(gameTime, spriteBatch);
             }
 
             spriteBatch.End();
 
-
             foreach (ModelMesh mesh in model.Meshes)
             {
+                float time = (float) timer.Elapsed.TotalSeconds;
+
+                Matrix rotation = Matrix.CreateRotationY(time * 0.7f);
+                Matrix translation = Matrix.CreateTranslation(0, 0, 0);
+
+                if (capture != null)
+                {
+                    Mat rvec = capture.getRvecs();
+                    Mat tvec = capture.getTvecs();
+                    float[] r_values = new float[6];
+                    float[] t_values = new float[6];
+
+                    if (!rvec.IsEmpty && !tvec.IsEmpty)
+                    {
+                        rvec.Row(0).CopyTo(r_values);
+                        tvec.Row(0).CopyTo(t_values);
+
+//                        rotation = Matrix.CreateRotationX(r_values[0])
+//                                   * Matrix.CreateRotationY(r_values[1])
+//                                   * Matrix.CreateRotationZ(r_values[2]);
+                        translation = Matrix.CreateTranslation(t_values[0], t_values[1], -t_values[2]);
+                    }
+                }
+
+                camTarget = new Vector3(0f, 0f, 0f);
+                camPosition = new Vector3(0f, 0f, -10);
+               
+                // create transform matrices
+                viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
+                    new Vector3(0f, 1f, 0f));// Y up
+
+
+                projectionMatrix = Matrix.CreatePerspectiveFieldOfView(
+                    MathHelper.ToRadians(45f), graphics.
+                        GraphicsDevice.Viewport.AspectRatio,
+                    1f, 1000f);
+
+
+                Matrix scaling = Matrix.CreateScale(sizeHalf * 2);
+
+//                worldMatrix = Matrix.CreateScale(1 / mesh.BoundingSphere.Radius) *
+//                              scaling * rotation * translation;
+               
+
+                worldMatrix = 
+                    Matrix.CreateWorld(camTarget, Vector3.
+                    Forward, Vector3.Up) *
+//                              scaling *
+                              rotation *
+                              (translation * past_translation);
+
+                past_translation = translation * -Matrix.Identity;
+
                 foreach (BasicEffect effect in mesh.Effects)
                 {
                     //effect.EnableDefaultLighting();
@@ -207,6 +217,6 @@ namespace KinectArucoTracking
                 mesh.Draw();
             }
             base.Draw(gameTime);
-        }       
+        }
     }
 }
