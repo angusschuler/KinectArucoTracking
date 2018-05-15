@@ -114,6 +114,8 @@ namespace KinectArucoTracking
 
         protected override void Update(GameTime gameTime)
         {
+            float x = 0, y = 0, z = 0;
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back ==
                 ButtonState.Pressed || Keyboard.GetState().IsKeyDown(
                 Keys.Escape))
@@ -122,7 +124,34 @@ namespace KinectArucoTracking
             if (Keyboard.GetState().IsKeyDown(Keys.Tab))
                 Console.WriteLine("Clicked");
                 capture.calibrateCamera();
-           
+
+            if (Keyboard.GetState().IsKeyDown(Keys.Left))
+            {
+                x -= 1f;
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.Right))
+            {
+                x += 1f;
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.Up))
+            {
+                y -= 1f;
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.Down))
+            {
+                y += 1f;
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.OemPlus))
+            {
+                z += 1f;
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.OemMinus))
+            {
+                z -= 1f;
+            }
+
+            worldMatrix = worldMatrix * Matrix.CreateTranslation(x, y, z);
+
             foreach (var component in _gameComponents)
             {
                 component.Update(gameTime);
@@ -155,25 +184,31 @@ namespace KinectArucoTracking
             {
                 float time = (float) timer.Elapsed.TotalSeconds;
 
-                Matrix rotation = Matrix.CreateRotationY(time * 0.7f);
+                Matrix rotation = Matrix.CreateRotationY(0); //time * 0.7f);
                 Matrix translation = Matrix.CreateTranslation(0, 0, 0);
 
                 if (capture != null)
                 {
                     Mat rvec = capture.getRvecs();
                     Mat tvec = capture.getTvecs();
-                    float[] r_values = new float[6];
-                    float[] t_values = new float[6];
+                    double[] rValues = new double[3];
+                    double[] tValues = new double[3];
+
 
                     if (!rvec.IsEmpty && !tvec.IsEmpty)
                     {
-                        rvec.Row(0).CopyTo(r_values);
-                        tvec.Row(0).CopyTo(t_values);
+                        //                        Console.WriteLine(rvec.Rows);
+                        rvec.Row(rvec.Rows-1).CopyTo(rValues);
+                        tvec.Row(rvec.Rows-1).CopyTo(tValues);
 
-//                        rotation = Matrix.CreateRotationX(r_values[0])
-//                                   * Matrix.CreateRotationY(r_values[1])
-//                                   * Matrix.CreateRotationZ(r_values[2]);
-                        translation = Matrix.CreateTranslation(t_values[0], t_values[1], -t_values[2]);
+//                        Console.WriteLine("Roation: x:" + rValues[0] + ", y:" + rValues[1] + ", z:" + rValues[2]);
+                        Console.WriteLine("Translation: x:" + tValues[0] + ", y:" + tValues[1] + ", z:" + tValues[2]);
+
+
+                        rotation = Matrix.CreateRotationX((float)rValues[0])
+                        * Matrix.CreateRotationY((float)rValues[1])
+                        * Matrix.CreateRotationZ((float)rValues[2] + MathHelper.ToRadians(180));
+                        //                        translation = Matrix.CreateTranslation(tValues[0], tValues[2], tValues[1]);
                     }
                 }
 
@@ -195,16 +230,16 @@ namespace KinectArucoTracking
 
 //                worldMatrix = Matrix.CreateScale(1 / mesh.BoundingSphere.Radius) *
 //                              scaling * rotation * translation;
-               
 
-                worldMatrix = 
-                    Matrix.CreateWorld(camTarget, Vector3.
-                    Forward, Vector3.Up) *
-//                              scaling *
-                              rotation *
-                              (translation * past_translation);
+                translation = translation * past_translation;
 
-                past_translation = translation * -Matrix.Identity;
+//                worldMatrix =
+//                    Matrix.CreateWorld(camTarget, Vector3.Forward, Vector3.Up) *
+////                              scaling *
+//                    rotation; // *
+////                              (translation * past_translation);
+
+                past_translation = Matrix.Invert(translation);
 
                 foreach (BasicEffect effect in mesh.Effects)
                 {

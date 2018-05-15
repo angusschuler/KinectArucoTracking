@@ -37,8 +37,8 @@ namespace KinectArucoTracking
 
         int markersX = 4;
         int markersY = 4;
-        int markersLength = 80;
-        int markersSeparation = 30;
+        int markersLength = 250;
+        int markersSeparation = 100;
 
         private GridBoard _gridBoard;
         private GridBoard ArucoBoard
