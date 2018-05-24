@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using Emgu.CV;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Structure;
 using KinectArucoTracking.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Color = Microsoft.Xna.Framework.Color;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace KinectArucoTracking
 {
@@ -31,7 +36,7 @@ namespace KinectArucoTracking
         //Orbit
         bool orbit = false;
 
-        private float sizeHalf = 250 / 2;
+        private float sizeHalf = 350 / 2;
         private Vector3[] glyphModel;
 
         FormVideoCapture capture;
@@ -195,7 +200,7 @@ namespace KinectArucoTracking
 
                 if (capture != null)
                 {
-                    Mat rMat = new Mat();
+                    Mat rMat = new Mat(3, 3, DepthType.Cv64F, 1);
                     Mat rvec = capture.getRvecs();
                     Mat tvec = capture.getTvecs();
                     double[] rValues = new double[3];
@@ -209,20 +214,54 @@ namespace KinectArucoTracking
 
                         //                        Console.WriteLine("Roation: x:" + rValues[0] + ", y:" + rValues[1] + ", z:" + rValues[2]);
 //                        Console.WriteLine("Translation: x:" + tValues[0] + ", y:" + tValues[1] + ", z:" + tValues[2]);
-                        CvInvoke.Rodrigues(rvec.Row(0), rMat);
 
-                        rMat.Row(0).CopyTo(rValues);
+//                        Matrix<byte> man = new Matrix<byte>(new Size(4, 4));
+                      
+                         
+                        rvec.Row(0).CopyTo(rValues);
                         tvec.Row(0).CopyTo(tValues);
 
-                        rotation = Matrix.CreateRotationX((float)rValues[0])
-                        * Matrix.CreateRotationY((float)rValues[1])
-                        * Matrix.CreateRotationZ((float)rValues[2]);
+//                        rValues = new [] {rValues[0], rValues[1], rValues[2]};
+
+                        CvInvoke.Rodrigues(rvec.Row(0), rMat);
+
+//                        Mat r = new Mat();
+//                        for (int i = 0; i < rvec.Rows; i++)
+//                        {
+//                            r *= rvec.Row(i);
+//                        }
+                        //                        Console.WriteLine(rMat.Rows + " : " + rMat.Cols);
+                        double[] row1 = new double[3];
+                        double[] row2 = new double[3];
+                        double[] row3 = new double[3];
+
+
+                        rMat.Row(0).CopyTo(row1);
+                        rMat.Row(1).CopyTo(row2);
+                        rMat.Row(2).CopyTo(row3);
+
+                        
+
+//                        Console.WriteLine(row1[0] + " : " + row1[1] + " : " + row1[2]);
+//                        Console.WriteLine(row2[0] + " : " + row2[1] + " : " + row2[2]);
+//                        Console.WriteLine(row3[0] + " : " + row3[1] + " : " + row3[2]);
+
+
+                        Microsoft.Xna.Framework.Matrix matrix = new Matrix(
+                            (float) row1[0], (float) row1[1], (float) row1[2], 0,
+                            (float) row2[0], (float) row2[1], (float) row2[2], 0,
+                            (float) row3[0], (float) row3[1], (float) row3[2], 0,
+                            0, 0, 0, 1
+                        );
+
+                        rotation = rotation.CreateEulerFromMatrix(row1, row2, row3);
+                        Console.WriteLine(rotation.Rotation);
                         translation = Matrix.CreateTranslation(-(float)tValues[0], -(float)tValues[1], (float)tValues[2]);
                     }
                 }
 
                 camTarget = new Vector3(0f, 0f, 0f);
-                camPosition = new Vector3(0f, 0f, -10);
+                camPosition = new Vector3(0f, 0f, -10f);
                
                 // create transform matrices
                 viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
@@ -233,14 +272,11 @@ namespace KinectArucoTracking
                     MathHelper.ToRadians(45f), graphics.
                         GraphicsDevice.Viewport.AspectRatio,
                     1f, 10000f);
-
+//                projectionMatrix = Matrix.CreatePerspective(graphics.GraphicsDevice.Viewport.Width,
+//                    graphics.GraphicsDevice.Viewport.Height, 1f, 10000f);
 
                 Matrix scaling = Matrix.CreateScale(sizeHalf * (2));
 
-//                worldMatrix = Matrix.CreateScale(1 / mesh.BoundingSphere.Radius) *
-//                              scaling * rotation * translation;
-
-//                translation = translation * past_translation;
 
                 worldMatrix =
 //                    Matrix.CreateWorld(camTarget, Vector3.Forward, Vector3.Up) *
@@ -248,8 +284,7 @@ namespace KinectArucoTracking
                     scaling *
                     rotation *
                     translation;
-                Console.WriteLine(worldMatrix.Translation);
-                past_translation = Matrix.Invert(translation);
+//                Console.WriteLine(worldMatrix.Rotation);
 
                 foreach (BasicEffect effect in mesh.Effects)
                 {

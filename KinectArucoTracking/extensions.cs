@@ -10,7 +10,9 @@ using System.Windows.Forms;
 using System.Xml;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Rectangle = System.Drawing.Rectangle;
 
 namespace KinectArucoTracking
 {
@@ -20,6 +22,64 @@ namespace KinectArucoTracking
         [DllImport("gdi32")]
         private static extern int DeleteObject(IntPtr o);
 
+        public static Matrix CreateEulerFromMatrix(this Matrix matrix, double[] row1, double[] row2, double[] row3)
+        {
+            const double RD_TO_DEG = 180 / Math.PI;
+            double x, y, z; // angles in degrees
+
+//             extract pitch
+                        double sinP = -row2[2];// -matrix.M23;
+                        if (sinP >= 1)
+                        {
+                            y = 90;
+                        }       // pole
+                        else if (sinP <= -1)
+                        {
+                            y = -90;
+                        } // pole
+                        else
+                        {
+                            y = Math.Asin(sinP);
+                        }
+            
+                        // extract heading and bank
+                        if (sinP < -0.9999 || sinP > 0.9999)
+                        { // account for small angle errors
+                            x = Math.Atan2(row3[0], row1[0]); //-matrix.M31, matrix.M11) * RD_TO_DEG;
+                            z = 0;
+                        }
+                        else
+                        {
+                            x = Math.Atan2(row1[2], row3[2]);  //matrix.M13, matrix.M33) * RD_TO_DEG;
+                            z = Math.Atan2(row2[0], row2[1]);  //matrix.M21, matrix.M22) * RD_TO_DEG;
+                        }
+
+
+//            if (row2[0] > 0.998)
+//            { // singularity at north pole
+//                x = 0;
+//                y = Math.PI / 2;
+//                z = Math.Atan2(row1[2], row3[2]);
+//            }
+//            else if (row2[0] < -0.998)
+//            { // singularity at south pole
+//                x = 0;
+//                y = -Math.PI / 2;
+//                z = Math.Atan2(row1[2], row3[2]);
+//            }
+//            else
+//            {
+//                x = Math.Atan2(-row2[2], row2[1]);
+//                y = Math.Asin(row2[0]);
+//                z = Math.Atan2(-row3[0], row1[0]);
+//            }
+
+
+//            Console.WriteLine(x + " : " + y + " : " + z);
+
+//            return Matrix.CreateFromYawPitchRoll((float)z, (float)x, (float)y);
+            return Matrix.CreateFromYawPitchRoll((float)-x, (float)-y, (float)z);
+        }
 
         public static Mat LoadFile(this Mat data, string filename)
         {
