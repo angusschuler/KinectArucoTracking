@@ -13,6 +13,8 @@ namespace KinectArucoTracking
 {
     public class FormVideoCapture
     {
+        private string fileExt = ".xml";
+
         private VideoCapture _capture = null;
 
         int calibrated = 0;
@@ -57,6 +59,7 @@ namespace KinectArucoTracking
 
         private Texture2D background;
         private GraphicsDevice graphicsDevice;
+        private bool calibrationFilesLoaded = false;
 
         public void InitCapture()
         {
@@ -82,8 +85,16 @@ namespace KinectArucoTracking
 
             try
             {
-                _cameraMatrix.LoadFile("cameraMatrix.xml");
-                _distCoeffs.LoadFile("distCoeffs.xml");
+                _cameraMatrix = _cameraMatrix.LoadFile("cameraMatrix" + fileExt);
+                _distCoeffs = _distCoeffs.LoadFile("distCoeffs" + fileExt);
+                if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
+                {
+                    calibrationFilesLoaded = true;
+                }
+                else
+                {
+                    Console.WriteLine("Failed Loading Calibration Files");
+                }
             }
             catch (Exception e)
             {
@@ -156,14 +167,14 @@ namespace KinectArucoTracking
                                         tvecmat.CopyTo(values);
                                         tvec.Push(values);
 
-                                        if (ids[i] == 5)
+//                                        if (ids[i] == 5)
                                             ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
                                                 markersLength * 0.5f);
                                     }
                                 }
                             }
 
-                            if (calibrate && (calibrated <= calibrationFreq))
+                            if (calibrate && (calibrated <= calibrationFreq) && !calibrationFilesLoaded)
                             {
                                 _allCorners.Push(corners);
                                 _allIds.Push(ids);
@@ -173,7 +184,7 @@ namespace KinectArucoTracking
                             
 
                                 int totalPoints = _markerCounterPerFrame.ToArray().Sum();
-                                if ((calibrated == calibrationFreq && totalPoints > 0)) // || !_distCoeffs.IsEmpty && !_cameraMatrix.IsEmpty)
+                                if ((calibrated == calibrationFreq && totalPoints > 0))
                                 {
 
                                     ArucoInvoke.CalibrateCameraAruco(_allCorners, _allIds, _markerCounterPerFrame,
@@ -188,8 +199,8 @@ namespace KinectArucoTracking
                                     _imageSize = System.Drawing.Size.Empty;
                                     calibrate = false;
                                     Console.WriteLine("Calibrated");
-                                    _cameraMatrix.SaveFile("cameraMatrix.xml");
-                                    _distCoeffs.SaveFile("distCoeffs.xml");
+                                    _cameraMatrix.SaveFile("cameraMatrix" + fileExt);
+                                    _distCoeffs.SaveFile("distCoeffs" + fileExt);
                                 }
                             }
                         }
@@ -239,6 +250,7 @@ namespace KinectArucoTracking
 
         public void calibrateCamera()
         {
+            calibrationFilesLoaded = false;
             calibrate = true;
         }
 

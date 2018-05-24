@@ -3,10 +3,13 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.IO.IsolatedStorage;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
+using System.Xml;
 using Emgu.CV;
+using Emgu.CV.CvEnum;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace KinectArucoTracking
@@ -17,50 +20,49 @@ namespace KinectArucoTracking
         [DllImport("gdi32")]
         private static extern int DeleteObject(IntPtr o);
 
-        public static bool LoadFile(this Mat data, string filename)
+
+        public static Mat LoadFile(this Mat data, string filename)
         {
             try
             {
-                string path = Application.ExecutablePath;
-                path = path.Replace(Path.GetFileName(path), filename);
-
-                if (!File.Exists(path)) return false;
+                var path = Path.Combine(Environment.CurrentDirectory, filename);
 
                 using (FileStream fs = File.Open(path, FileMode.Open))
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
-                    data = (Mat)formatter.Deserialize(fs);
+                    data = (Mat) formatter.Deserialize(fs);
 
-                    return true;
+                    return data;
                 }
+//                return new Mat(Path.Combine(Environment.CurrentDirectory, filename), ImreadModes.AnyColor);
             }
             catch (Exception e)
             {
-                Debug.WriteLine("Error: LoadFile: " + e.Message);
-                return false;
+                Console.WriteLine("Error: LoadFile: " + e.Message);
+                return new Mat();
             }
         }
 
-        public static bool SaveFile(this Mat data, string filename)
+        public static void SaveFile(this Mat data, string filename)
         {
+            if (data == null) return;
             try
-            {
-                string path = Application.ExecutablePath;
-                path = path.Replace(Path.GetFileName(path), filename);
+            {  
+                string path = Path.Combine(Environment.CurrentDirectory, filename);
 
                 using (FileStream fs = File.Open(path, FileMode.Create, FileAccess.Write))
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
+                    
                     formatter.Serialize(fs, data);
                 }
+
+                //                data.Save(filename);
             }
             catch (Exception e)
             {
-                Debug.WriteLine("Error: SaveFile: " + e.Message);
-                return false;
+                Console.WriteLine("Error: SaveFile: " + e.Message);
             }
-
-            return true;
         }
 
 
@@ -93,5 +95,7 @@ namespace KinectArucoTracking
 
             return texture;
         }
+
+//        public static float[] 
     }
 }
