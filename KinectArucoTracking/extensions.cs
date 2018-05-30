@@ -22,63 +22,58 @@ namespace KinectArucoTracking
         [DllImport("gdi32")]
         private static extern int DeleteObject(IntPtr o);
 
-        public static Matrix CreateEulerFromMatrix(this Matrix matrix, double[] row1, double[] row2, double[] row3)
+        public static Matrix CreateEulerFromMatrix(this Matrix matrix, double[] row0, double[] row1, double[] row2)
         {
             const double RD_TO_DEG = 180 / Math.PI;
-            double x, y, z; // angles in degrees
+            double roll, pitch, yaw; // angles in degrees
 
 //             extract pitch
-                        double sinP = -row2[2];// -matrix.M23;
+                        double sinP = -row1[2];// -matrix.M23;
                         if (sinP >= 1)
                         {
-                            y = 90;
+                            pitch = 90;
                         }       // pole
                         else if (sinP <= -1)
                         {
-                            y = -90;
+                            pitch = -90;
                         } // pole
                         else
                         {
-                            y = Math.Asin(sinP);
+                            pitch = Math.Asin(sinP);
                         }
             
                         // extract heading and bank
                         if (sinP < -0.9999 || sinP > 0.9999)
                         { // account for small angle errors
-                            x = Math.Atan2(row3[0], row1[0]); //-matrix.M31, matrix.M11) * RD_TO_DEG;
-                            z = 0;
+                            roll = Math.Atan2(row2[0], row0[0]); //-matrix.M31, matrix.M11) * RD_TO_DEG;
+                            yaw = 0;
                         }
                         else
                         {
-                            x = Math.Atan2(row1[2], row3[2]);  //matrix.M13, matrix.M33) * RD_TO_DEG;
-                            z = Math.Atan2(row2[0], row2[1]);  //matrix.M21, matrix.M22) * RD_TO_DEG;
+                            roll = Math.Atan2(row0[2], row2[2]);  //matrix.M13, matrix.M33) * RD_TO_DEG;
+                            yaw = Math.Atan2(row1[0], row1[1]);  //matrix.M21, matrix.M22) * RD_TO_DEG;
                         }
 
-
-//            if (row2[0] > 0.998)
-//            { // singularity at north pole
-//                x = 0;
-//                y = Math.PI / 2;
-//                z = Math.Atan2(row1[2], row3[2]);
-//            }
-//            else if (row2[0] < -0.998)
-//            { // singularity at south pole
-//                x = 0;
-//                y = -Math.PI / 2;
-//                z = Math.Atan2(row1[2], row3[2]);
+//            Experiences Gimble Lock
+//            double sy = Math.Sqrt((row0[0] * row0[0] + row1[0] * row1[0]));
+//
+//            bool singular = sy < (1 * 10 ^ (-6));
+//
+//            if (!singular)
+//            {
+//                yaw = Math.Atan2(row2[1], row2[2]);
+//                pitch = Math.Atan2(-row2[0], sy);
+//                roll = Math.Atan2(row1[0], row0[0]);
 //            }
 //            else
 //            {
-//                x = Math.Atan2(-row2[2], row2[1]);
-//                y = Math.Asin(row2[0]);
-//                z = Math.Atan2(-row3[0], row1[0]);
+//                yaw = Math.Atan2(-row1[2], row1[1]);
+//                pitch = Math.Atan2(-row2[0], sy);
+//                roll = 0;
 //            }
 
-
-//            Console.WriteLine(x + " : " + y + " : " + z);
-
-//            return Matrix.CreateFromYawPitchRoll((float)z, (float)x, (float)y);
-            return Matrix.CreateFromYawPitchRoll((float)-x, (float)-y, (float)z);
+//            return Matrix.CreateFromYawPitchRoll((float)-yaw, (float)-pitch, (float)-roll);
+            return Matrix.CreateFromYawPitchRoll((float)-roll, (float)-pitch, (float)yaw);
         }
 
         public static Mat LoadFile(this Mat data, string filename)

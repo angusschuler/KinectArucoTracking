@@ -36,7 +36,7 @@ namespace KinectArucoTracking
         //Orbit
         bool orbit = false;
 
-        private float sizeHalf = 350 / 2;
+        private float sizeHalf = 1780f / 2;
         private Vector3[] glyphModel;
 
         FormVideoCapture capture;
@@ -44,13 +44,12 @@ namespace KinectArucoTracking
         private List<Component> _gameComponents;
 
         private Stopwatch timer = new Stopwatch();
-        private Matrix past_translation = Matrix.CreateTranslation(0, 0, 0);
 
         public KinectArucoTracking()
         {
             graphics = new GraphicsDeviceManager(this);
-//            graphics.PreferredBackBufferHeight = 1080;
-//            graphics.PreferredBackBufferWidth = 1920;
+            graphics.PreferredBackBufferHeight = 480;
+            graphics.PreferredBackBufferWidth = 640;
             Content.RootDirectory = "Content";
         }
 
@@ -63,16 +62,16 @@ namespace KinectArucoTracking
             IsMouseVisible = true;
 
             //Setup Camera
-            camTarget = new Vector3(0f, 0f, 0f);
-            camPosition = new Vector3(0f, 0f, -5);
-            projectionMatrix = Matrix.CreatePerspectiveFieldOfView(
-                               MathHelper.ToRadians(45f), graphics.
-                               GraphicsDevice.Viewport.AspectRatio,
-                1f, 1000f);
-            viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
-                         new Vector3(0f, 1f, 0f));// Y up
-            worldMatrix = Matrix.CreateWorld(camTarget, Vector3.
-                          Forward, Vector3.Up);
+//            camTarget = new Vector3(0f, 0f, 0f);
+//            camPosition = new Vector3(0f, 0f, -1f);
+//            projectionMatrix = Matrix.CreatePerspectiveFieldOfView(
+//                               MathHelper.ToRadians(45f), graphics.
+//                               GraphicsDevice.Viewport.AspectRatio,
+//                1f, 1000f);
+//            viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
+//                         new Vector3(0f, 1f, 0f));// Y up
+//            worldMatrix = Matrix.CreateWorld(camTarget, Vector3.
+//                          Forward, Vector3.Up);
 
             model = Content.Load<Model>("MonoCube");
 
@@ -119,8 +118,6 @@ namespace KinectArucoTracking
 
         protected override void Update(GameTime gameTime)
         {
-            float x = 0, y = 0, z = 0;
-
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back ==
                 ButtonState.Pressed || Keyboard.GetState().IsKeyDown(
                     Keys.Escape))
@@ -131,37 +128,12 @@ namespace KinectArucoTracking
 
             if (Keyboard.GetState().IsKeyDown(Keys.Tab))
             {
-                Console.WriteLine("Clicked Cliabrate");
+                Console.WriteLine("Clicked Calibrate");
                 capture.calibrateCamera();
             }
                 
 
-            if (Keyboard.GetState().IsKeyDown(Keys.Left))
-            {
-                x -= 1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Right))
-            {
-                x += 1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Up))
-            {
-                y -= 1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Down))
-            {
-                y += 1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.OemPlus))
-            {
-                z += 1f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.OemMinus))
-            {
-                z -= 1f;
-            }
-
-            worldMatrix = worldMatrix * Matrix.CreateTranslation(x, y, z);
+            
 
             foreach (var component in _gameComponents)
             {
@@ -202,24 +174,29 @@ namespace KinectArucoTracking
                 {
                     Mat rMat = new Mat(3, 3, DepthType.Cv64F, 1);
                     Mat rvec = capture.getRvecs();
+//                    Mat rvec = new Mat(); //capture.getRvecs();
                     Mat tvec = capture.getTvecs();
+//                    Mat tvec = new Mat(); //capture.getTvecs();
                     double[] rValues = new double[3];
                     double[] tValues = new double[3];
 
 
                     if (!rvec.IsEmpty && !tvec.IsEmpty)
                     {
-                        //                        Console.WriteLine(rvec.Rows);
                         
 
+                        rvec.Row(0).CopyTo(rValues);
+                        tvec.Row(0).CopyTo(tValues);
+                        //                        Console.WriteLine(rvec.Rows);
+
+
                         //                        Console.WriteLine("Roation: x:" + rValues[0] + ", y:" + rValues[1] + ", z:" + rValues[2]);
-//                        Console.WriteLine("Translation: x:" + tValues[0] + ", y:" + tValues[1] + ", z:" + tValues[2]);
+                        Console.WriteLine("Translation: x:" + tValues[0] + ", y:" + tValues[1] + ", z:" + tValues[2]);
 
 //                        Matrix<byte> man = new Matrix<byte>(new Size(4, 4));
                       
                          
-                        rvec.Row(0).CopyTo(rValues);
-                        tvec.Row(0).CopyTo(tValues);
+                      
 
 //                        rValues = new [] {rValues[0], rValues[1], rValues[2]};
 
@@ -253,25 +230,24 @@ namespace KinectArucoTracking
                             (float) row3[0], (float) row3[1], (float) row3[2], 0,
                             0, 0, 0, 1
                         );
-
                         rotation = rotation.CreateEulerFromMatrix(row1, row2, row3);
-                        Console.WriteLine(rotation.Rotation);
                         translation = Matrix.CreateTranslation(-(float)tValues[0], -(float)tValues[1], (float)tValues[2]);
                     }
                 }
 
-                camTarget = new Vector3(0f, 0f, 0f);
-                camPosition = new Vector3(0f, 0f, -10f);
+                camTarget = Vector3.Zero;
+                camPosition = new Vector3(0f, 0f, -1f);
                
                 // create transform matrices
                 viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
                     new Vector3(0f, 1f, 0f));// Y up
 
 
-                projectionMatrix = Matrix.CreatePerspectiveFieldOfView(
-                    MathHelper.ToRadians(45f), graphics.
-                        GraphicsDevice.Viewport.AspectRatio,
-                    1f, 10000f);
+                projectionMatrix = Matrix.CreatePerspective(1, 1 / GraphicsDevice.Viewport.AspectRatio, 1f, 10000);
+
+//                    MathHelper.ToRadians(45f), graphics.
+//                        GraphicsDevice.Viewport.AspectRatio,
+//                    1f, 10000f);
 //                projectionMatrix = Matrix.CreatePerspective(graphics.GraphicsDevice.Viewport.Width,
 //                    graphics.GraphicsDevice.Viewport.Height, 1f, 10000f);
 

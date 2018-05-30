@@ -39,8 +39,8 @@ namespace KinectArucoTracking
 
         int markersX = 4;
         int markersY = 4;
-        int markersLength = 250;
-        int markersSeparation = 100;
+        private float markersLength = 1780f; //250f;
+        private float markersSeparation = 100f;
 
         private GridBoard _gridBoard;
         private GridBoard ArucoBoard
@@ -64,6 +64,7 @@ namespace KinectArucoTracking
         public void InitCapture()
         {
             _detectorParameters = DetectorParameters.GetDefault();
+            _detectorParameters.CornerRefinementMethod = DetectorParameters.RefinementMethod.Subpix;
 
             try
             {
@@ -126,7 +127,9 @@ namespace KinectArucoTracking
             
             if (_capture != null && _capture.Ptr != IntPtr.Zero)
             {
-                
+//                Console.WriteLine(_capture.Width);
+//                Console.WriteLine(_capture.Height);
+
                 _capture.Retrieve(_frame);
                 _frame.CopyTo(_frameCopy);
                 //var image = _frameCopy.ToImage<Bgr, byte>();
@@ -143,9 +146,19 @@ namespace KinectArucoTracking
 
                         if (ids.Size > 0)
                         {
-                            ArucoInvoke.RefineDetectedMarkers(_frameCopy, ArucoBoard, corners, ids, rejected, null,
-                                null,
-                                10, 3, true, null, _detectorParameters);
+                            int[] test = ids.ToArray();
+                            for (int i = 0; i < test.Length; i++)
+                            {
+                                Console.WriteLine(test[i]);
+
+                            }
+                            if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
+                            {
+                                ArucoInvoke.RefineDetectedMarkers(_frameCopy, ArucoBoard, corners, ids, rejected,
+                                    _cameraMatrix,
+                                    _distCoeffs,
+                                    9, 4, true, null, _detectorParameters);
+                            }
 
                             ArucoInvoke.DrawDetectedMarkers(_frameCopy, corners, ids, new MCvScalar(0, 255, 0));
 
