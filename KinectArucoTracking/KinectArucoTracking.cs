@@ -5,7 +5,6 @@ using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using KinectArucoTracking.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -37,11 +36,8 @@ namespace KinectArucoTracking
         bool orbit = false;
 
         private float sizeHalf = 1780f / 2;
-        private Vector3[] glyphModel;
 
         FormVideoCapture capture;
-
-        private List<Component> _gameComponents;
 
         private Stopwatch timer = new Stopwatch();
 
@@ -74,14 +70,6 @@ namespace KinectArucoTracking
 //                          Forward, Vector3.Up);
 
             model = Content.Load<Model>("MonoCube");
-
-            glyphModel = new Vector3[]
-            {
-                new Vector3( -sizeHalf, 0,  sizeHalf ),
-                new Vector3(  sizeHalf, 0,  sizeHalf ),
-                new Vector3(  sizeHalf, 0, -sizeHalf ),
-                new Vector3( -sizeHalf, 0, -sizeHalf ),
-            };
         }
 
         protected override void LoadContent()
@@ -90,23 +78,6 @@ namespace KinectArucoTracking
 
             capture = new FormVideoCapture(background, GraphicsDevice);
 
-//            while (capture.getCapture() == null)
-//            {
-//
-//            }
-
-            var button = new Button(Content.Load<Texture2D>("Controls/Button"), Content.Load<SpriteFont>("Fonts/font"))
-            {
-                Position = new Vector2(5, 5),
-                Text = "Calibrate",
-                PenColor = Color.Black
-            };
-
-            _gameComponents = new List<Component>()
-            {
-                button
-            };
-            
             background = new Texture2D(GraphicsDevice, capture.getCapture().Width, capture.getCapture().Height); // Size of Kinect Stream 1920x1080. Graphics Viewport is 800x640
 
             capture.SetTexture(background);
@@ -122,7 +93,6 @@ namespace KinectArucoTracking
                 ButtonState.Pressed || Keyboard.GetState().IsKeyDown(
                     Keys.Escape))
             {
-
                 Exit();
             }
 
@@ -132,14 +102,6 @@ namespace KinectArucoTracking
                 capture.calibrateCamera();
             }
                 
-
-            
-
-            foreach (var component in _gameComponents)
-            {
-                component.Update(gameTime);
-            }
-
             graphics.ApplyChanges();
             base.Update(gameTime);
         }
@@ -154,11 +116,6 @@ namespace KinectArucoTracking
             if (background != null)
             {
                 spriteBatch.Draw(background, mainFrame, Microsoft.Xna.Framework.Color.White);
-            }
-
-            foreach (var component in _gameComponents)
-            {
-//                component.Draw(gameTime, spriteBatch);
             }
 
             spriteBatch.End();
@@ -191,14 +148,14 @@ namespace KinectArucoTracking
 
 
                         //                        Console.WriteLine("Roation: x:" + rValues[0] + ", y:" + rValues[1] + ", z:" + rValues[2]);
-                        Console.WriteLine("Translation: x:" + tValues[0] + ", y:" + tValues[1] + ", z:" + tValues[2]);
+                        //Console.WriteLine("Translation Tracking: x:" + tValues[0] + ", y:" + tValues[1] + ", z:" + tValues[2]);
 
-//                        Matrix<byte> man = new Matrix<byte>(new Size(4, 4));
-                      
-                         
-                      
+                        //                        Matrix<byte> man = new Matrix<byte>(new Size(4, 4));
 
-//                        rValues = new [] {rValues[0], rValues[1], rValues[2]};
+
+
+
+                        //                        rValues = new [] {rValues[0], rValues[1], rValues[2]};
 
                         CvInvoke.Rodrigues(rvec.Row(0), rMat);
 
@@ -231,16 +188,16 @@ namespace KinectArucoTracking
                             0, 0, 0, 1
                         );
                         rotation = rotation.CreateEulerFromMatrix(row1, row2, row3);
-                        translation = Matrix.CreateTranslation(-(float)tValues[0], -(float)tValues[1], (float)tValues[2]);
+                        translation = Matrix.CreateTranslation((float)tValues[0], -(float)tValues[1], -(float)tValues[2]);
                     }
                 }
 
                 camTarget = Vector3.Zero;
-                camPosition = new Vector3(0f, 0f, -1f);
+                camPosition = new Vector3(0f, 0f, 1f);
                
                 // create transform matrices
                 viewMatrix = Matrix.CreateLookAt(camPosition, camTarget,
-                    new Vector3(0f, 1f, 0f));// Y up
+                    Vector3.Up);// Y up
 
 
                 projectionMatrix = Matrix.CreatePerspective(1, 1 / GraphicsDevice.Viewport.AspectRatio, 1f, 10000);

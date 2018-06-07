@@ -76,7 +76,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Component.cs" />
-    <Compile Include="Controls\Button.cs" />
     <Compile Include="extensions.cs" />
     <Compile Include="FormVideoCapture.cs" />
     <Compile Include="KinectArucoTracking.cs" />

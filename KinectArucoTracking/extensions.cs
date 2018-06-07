@@ -27,53 +27,35 @@ namespace KinectArucoTracking
             const double RD_TO_DEG = 180 / Math.PI;
             double roll, pitch, yaw; // angles in degrees
 
-//             extract pitch
-                        double sinP = -row1[2];// -matrix.M23;
-                        if (sinP >= 1)
-                        {
-                            pitch = 90;
-                        }       // pole
-                        else if (sinP <= -1)
-                        {
-                            pitch = -90;
-                        } // pole
-                        else
-                        {
-                            pitch = Math.Asin(sinP);
-                        }
-            
-                        // extract heading and bank
-                        if (sinP < -0.9999 || sinP > 0.9999)
-                        { // account for small angle errors
-                            roll = Math.Atan2(row2[0], row0[0]); //-matrix.M31, matrix.M11) * RD_TO_DEG;
-                            yaw = 0;
-                        }
-                        else
-                        {
-                            roll = Math.Atan2(row0[2], row2[2]);  //matrix.M13, matrix.M33) * RD_TO_DEG;
-                            yaw = Math.Atan2(row1[0], row1[1]);  //matrix.M21, matrix.M22) * RD_TO_DEG;
-                        }
+            //             extract pitch
+            double sinP = -row1[2];// -matrix.M23;
+            if (sinP >= 1)
+            {
+                pitch = Math.PI / 2;
+            }       // pole
+            else if (sinP <= -1)
+            {
+                pitch = -Math.PI/2;
+            } // pole
+            else
+            {
+                pitch = Math.Asin(sinP);
+            }
 
-//            Experiences Gimble Lock
-//            double sy = Math.Sqrt((row0[0] * row0[0] + row1[0] * row1[0]));
-//
-//            bool singular = sy < (1 * 10 ^ (-6));
-//
-//            if (!singular)
-//            {
-//                yaw = Math.Atan2(row2[1], row2[2]);
-//                pitch = Math.Atan2(-row2[0], sy);
-//                roll = Math.Atan2(row1[0], row0[0]);
-//            }
-//            else
-//            {
-//                yaw = Math.Atan2(-row1[2], row1[1]);
-//                pitch = Math.Atan2(-row2[0], sy);
-//                roll = 0;
-//            }
+            // extract heading and bank
+            if (sinP < -0.998 || sinP > 0.998)
+            { // account for small angle errors
+                roll = Math.Atan2(row2[0], row0[0]); //-matrix.M31, matrix.M11) * RD_TO_DEG;
+                yaw = 0;
+            }
+            else
+            {
+                roll = Math.Atan2(row0[2], row2[2]);  //matrix.M13, matrix.M33) * RD_TO_DEG;
+                yaw = Math.Atan2(row1[0], row1[1]);  //matrix.M21, matrix.M22) * RD_TO_DEG;
+            }
 
-//            return Matrix.CreateFromYawPitchRoll((float)-yaw, (float)-pitch, (float)-roll);
-            return Matrix.CreateFromYawPitchRoll((float)-roll, (float)-pitch, (float)yaw);
+          
+            return Matrix.CreateFromYawPitchRoll(-(float)roll, (float)pitch, -(float)yaw);
         }
 
         public static Mat LoadFile(this Mat data, string filename)
@@ -89,7 +71,6 @@ namespace KinectArucoTracking
 
                     return data;
                 }
-//                return new Mat(Path.Combine(Environment.CurrentDirectory, filename), ImreadModes.AnyColor);
             }
             catch (Exception e)
             {
@@ -111,8 +92,6 @@ namespace KinectArucoTracking
                     
                     formatter.Serialize(fs, data);
                 }
-
-                //                data.Save(filename);
             }
             catch (Exception e)
             {
@@ -133,7 +112,6 @@ namespace KinectArucoTracking
 
 
             // copy bitmap data into texture
-
             byte[] rgbValues = new byte[bufferSize];
 
             Marshal.Copy(data.Scan0, rgbValues, 0, rgbValues.Length);
@@ -151,6 +129,5 @@ namespace KinectArucoTracking
             return texture;
         }
 
-//        public static float[] 
     }
 }

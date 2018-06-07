@@ -146,12 +146,7 @@ namespace KinectArucoTracking
 
                         if (ids.Size > 0)
                         {
-                            int[] test = ids.ToArray();
-                            for (int i = 0; i < test.Length; i++)
-                            {
-                                Console.WriteLine(test[i]);
-
-                            }
+                          
                             if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
                             {
                                 ArucoInvoke.RefineDetectedMarkers(_frameCopy, ArucoBoard, corners, ids, rejected,
@@ -177,11 +172,15 @@ namespace KinectArucoTracking
                                         double[] values = new double[3];
                                         rvecmat.CopyTo(values);
                                         rvec.Push(values);
+
                                         tvecmat.CopyTo(values);
                                         tvec.Push(values);
 
+                                        
+                                        //Console.WriteLine("Translation Capture: x:" + values[0] + ", y:" + values[1] + ", z:" + values[2]);
 //                                        if (ids[i] == 5)
-                                            ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
+
+                                        ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
                                                 markersLength * 0.5f);
                                     }
                                 }
@@ -218,7 +217,7 @@ namespace KinectArucoTracking
                             }
                         }
 
-                        this.background = _frameCopy.Bitmap.XNATextureFromBitmap(background);
+                        this.background = _frameCopy.Clone().Bitmap.XNATextureFromBitmap(background);
                     }
                 }
             }
