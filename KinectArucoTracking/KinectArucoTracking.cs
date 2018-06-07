@@ -101,6 +101,12 @@ namespace KinectArucoTracking
                 Console.WriteLine("Clicked Calibrate");
                 capture.calibrateCamera();
             }
+
+            if (Keyboard.GetState().IsKeyDown(Keys.Enter))
+            {
+                Console.WriteLine("Print");
+                capture.beginPrint();
+            }
                 
             graphics.ApplyChanges();
             base.Update(gameTime);
@@ -130,10 +136,10 @@ namespace KinectArucoTracking
                 if (capture != null)
                 {
                     Mat rMat = new Mat(3, 3, DepthType.Cv64F, 1);
-                    Mat rvec = capture.getRvecs();
+                    Mat rvec = new Mat();//capture.getRvecs());capture.getRvecs();
 //                    Mat rvec = new Mat(); //capture.getRvecs();
-                    Mat tvec = capture.getTvecs();
-//                    Mat tvec = new Mat(); //capture.getTvecs();
+                    Mat tvec = new Mat();//capture.getTvecs();
+                                         //                    Mat tvec = new Mat(); //capture.getTvecs();
                     double[] rValues = new double[3];
                     double[] tValues = new double[3];
 
@@ -187,8 +193,8 @@ namespace KinectArucoTracking
                             (float) row3[0], (float) row3[1], (float) row3[2], 0,
                             0, 0, 0, 1
                         );
-                        rotation = rotation.CreateEulerFromMatrix(row1, row2, row3);
-                        translation = Matrix.CreateTranslation((float)tValues[0], -(float)tValues[1], -(float)tValues[2]);
+                        //rotation = rotation.CreateEulerFromMatrix(row1, row2, row3);
+                        //translation = Matrix.CreateTranslation((float)tValues[0], -(float)tValues[1], -(float)tValues[2]);
                     }
                 }
 

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Drawing.Printing;
 using System.Linq;
+using System.Windows.Forms;
 using Emgu.CV;
 using Emgu.CV.Aruco;
 using Emgu.CV.CvEnum;
@@ -39,8 +41,19 @@ namespace KinectArucoTracking
 
         int markersX = 4;
         int markersY = 4;
-        private float markersLength = 1780f; //250f;
+        private float markersLength = 250f;//1780f; 
         private float markersSeparation = 100f;
+
+        private Dictionary ArucoDictionary
+        {
+            get
+            {
+                if (_dict == null)
+                    _dict = new Dictionary(Dictionary.PredefinedDictionaryName.DictArucoOriginal);
+                return _dict;
+            }
+
+        }
 
         private GridBoard _gridBoard;
         private GridBoard ArucoBoard
@@ -54,6 +67,19 @@ namespace KinectArucoTracking
                 return _gridBoard;
             }
         }
+
+        private CharucoBoard _board;
+        private CharucoBoard board {
+            get
+            {
+                if (_board == null)
+                {
+                    _board = new CharucoBoard(markersX, markersY, 350, 250, ArucoDictionary);
+                }
+                return _board;
+            }
+        }
+        
 
         private bool calibrate = false;
 
@@ -110,17 +136,6 @@ namespace KinectArucoTracking
             InitCapture();
         }
 
-        private Dictionary ArucoDictionary
-        {
-            get
-            {
-                if (_dict == null)
-                    _dict = new Dictionary(Dictionary.PredefinedDictionaryName.DictArucoOriginal);
-                return _dict;
-            }
-
-        }
-
 
         void ImageArrived(object sender, EventArgs e)
         {
@@ -135,65 +150,82 @@ namespace KinectArucoTracking
                 //var image = _frameCopy.ToImage<Bgr, byte>();
                 if (!_frame.IsEmpty)
                 {
+
                 
 
-                using (VectorOfInt ids = new VectorOfInt())
-                using (VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF())
+                    using (VectorOfInt ids = new VectorOfInt())
+                    using (VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF())
+                    using (VectorOfVectorOfPointF charucoCorners = new VectorOfVectorOfPointF())
+                    using (VectorOfInt charucoIds = new VectorOfInt())
                     using (VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF())
                     {
                         ArucoInvoke.DetectMarkers(_frameCopy, ArucoDictionary, corners, ids, _detectorParameters,
                             rejected);
 
+
                         if (ids.Size > 0)
                         {
-                          
+
                             if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
                             {
-                                ArucoInvoke.RefineDetectedMarkers(_frameCopy, ArucoBoard, corners, ids, rejected,
-                                    _cameraMatrix,
-                                    _distCoeffs,
-                                    9, 4, true, null, _detectorParameters);
+                                //ArucoInvoke.RefineDetectedMarkers(_frameCopy, ArucoBoard, corners, ids, rejected,
+                                //    _cameraMatrix,
+                                //    _distCoeffs,
+                                //    9, 4, true, null, _detectorParameters);
                             }
+                            
 
-                            ArucoInvoke.DrawDetectedMarkers(_frameCopy, corners, ids, new MCvScalar(0, 255, 0));
+                           
+
+                            //ArucoInvoke.DrawDetectedMarkers(_frameCopy, corners, ids, new MCvScalar(0, 255, 0));
 
                             if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
                             {
-                                ArucoInvoke.EstimatePoseSingleMarkers(corners, markersLength, _cameraMatrix,
-                                    _distCoeffs,
-                                    rvecs, tvecs);
-                                for (int i = 0; i < ids.Size; i++)
+                                //ArucoInvoke.EstimatePoseSingleMarkers(corners, markersLength, _cameraMatrix,
+                                //    _distCoeffs,
+                                //    rvecs, tvecs);
+                                ArucoInvoke.InterpolateCornersCharuco(corners, ids, _frameCopy, board, charucoCorners,
+                                    charucoIds, _cameraMatrix, _distCoeffs);
+
+                                if (charucoIds.Size > 0)
                                 {
-                                    using (Mat rvecmat = rvecs.Row(i))
-                                    using (Mat tvecmat = tvecs.Row(i))
-                                    using (VectorOfDouble rvec = new VectorOfDouble())
-                                    using (VectorOfDouble tvec = new VectorOfDouble())
-                                    {
-                                        double[] values = new double[3];
-                                        rvecmat.CopyTo(values);
-                                        rvec.Push(values);
-
-                                        tvecmat.CopyTo(values);
-                                        tvec.Push(values);
-
-                                        
-                                        //Console.WriteLine("Translation Capture: x:" + values[0] + ", y:" + values[1] + ", z:" + values[2]);
-//                                        if (ids[i] == 5)
-
-                                        ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
-                                                markersLength * 0.5f);
-                                    }
+                                    ArucoInvoke.DrawDetectedCornersCharuco(_frameCopy, charucoCorners, charucoIds, new MCvScalar(0, 255, 0));
+                                    ArucoInvoke.EstimatePoseCharucoBoard(charucoCorners, charucoIds, board,
+                                        _cameraMatrix, _distCoeffs, rvecs, tvecs);
                                 }
+
+                                //for (int i = 0; i < ids.Size; i++)
+                                //{
+                                //    using (Mat rvecmat = rvecs.Row(i))
+                                //    using (Mat tvecmat = tvecs.Row(i))
+                                //    using (VectorOfDouble rvec = new VectorOfDouble())
+                                //    using (VectorOfDouble tvec = new VectorOfDouble())
+                                //    {
+                                //        double[] values = new double[3];
+                                //        rvecmat.CopyTo(values);
+                                //        rvec.Push(values);
+
+                                //        tvecmat.CopyTo(values);
+                                //        tvec.Push(values);
+
+
+                                //        //Console.WriteLine("Translation Capture: x:" + values[0] + ", y:" + values[1] + ", z:" + values[2]);
+                                //        //                                        if (ids[i] == 5)
+
+                                //        //ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
+                                //        //        markersLength * 0.5f);
+                                //    }
+                                //}
                             }
 
                             if (calibrate && (calibrated <= calibrationFreq) && !calibrationFilesLoaded)
                             {
                                 _allCorners.Push(corners);
                                 _allIds.Push(ids);
-                                _markerCounterPerFrame.Push(new int[] {corners.Size});
+                                _markerCounterPerFrame.Push(new int[] { corners.Size });
                                 _imageSize = _frameCopy.Size;
                                 calibrated += 1;
-                            
+
 
                                 int totalPoints = _markerCounterPerFrame.ToArray().Sum();
                                 if ((calibrated == calibrationFreq && totalPoints > 0))
@@ -222,6 +254,49 @@ namespace KinectArucoTracking
                 }
             }
             
+        }
+
+        public void beginPrint()
+        {
+            Size imageSize = new Size();
+
+            int margins = (int)markersSeparation;
+            imageSize.Width = markersX * ((int)markersLength + (int)markersSeparation) - (int)markersSeparation + 2 * margins;
+            imageSize.Height = markersY * ((int)markersLength + (int)markersSeparation) - (int)markersSeparation + 2 * margins;
+            int borderBits = 1;
+
+            Mat boardImage = new Mat();
+            board.Draw(imageSize, boardImage, margins, borderBits);
+            bmIm = boardImage.Bitmap;
+            PrintImage();
+
+        }
+
+        private void PrintImage()
+        {
+            PrintDocument pd = new PrintDocument();
+
+            //pd.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+            //pd.OriginAtMargins = false;
+            //pd.DefaultPageSettings.Landscape = true;
+
+            pd.PrintPage += new PrintPageEventHandler(pd_PrintPage);
+
+            PrintPreviewDialog printPreviewDialog1 = new PrintPreviewDialog();
+
+            printPreviewDialog1.Document = pd;
+            //printPreviewDialog1.AutoScale = true;
+            printPreviewDialog1.ShowDialog();
+
+
+        }
+
+        Image bmIm;
+
+        void pd_PrintPage(object sender, PrintPageEventArgs e)
+        {
+            double cmToUnits = 100 / 2.54;
+            e.Graphics.DrawImage(bmIm, 0, 0, (float)(15 * cmToUnits), (float)(15 * cmToUnits));
         }
 
         public Texture2D getBackground()
