@@ -35,7 +35,7 @@ namespace KinectArucoTracking
         //Orbit
         bool orbit = false;
 
-        private float sizeHalf = 1780f / 2;
+        private float size = 350f * 8;//1780f / 2;
 
         FormVideoCapture capture;
 
@@ -124,6 +124,9 @@ namespace KinectArucoTracking
                 spriteBatch.Draw(background, mainFrame, Microsoft.Xna.Framework.Color.White);
             }
 
+            GraphicsDevice.DepthStencilState = DepthStencilState.DepthRead;
+            GraphicsDevice.BlendState = BlendState.AlphaBlend;
+
             spriteBatch.End();
 
             foreach (ModelMesh mesh in model.Meshes)
@@ -136,9 +139,9 @@ namespace KinectArucoTracking
                 if (capture != null)
                 {
                     Mat rMat = new Mat(3, 3, DepthType.Cv64F, 1);
-                    Mat rvec = new Mat();//capture.getRvecs());capture.getRvecs();
+                    Mat rvec = capture.getRvecs();
 //                    Mat rvec = new Mat(); //capture.getRvecs();
-                    Mat tvec = new Mat();//capture.getTvecs();
+                    Mat tvec = capture.getTvecs();
                                          //                    Mat tvec = new Mat(); //capture.getTvecs();
                     double[] rValues = new double[3];
                     double[] tValues = new double[3];
@@ -148,8 +151,8 @@ namespace KinectArucoTracking
                     {
                         
 
-                        rvec.Row(0).CopyTo(rValues);
-                        tvec.Row(0).CopyTo(tValues);
+                        rvec.CopyTo(rValues);
+                        tvec.CopyTo(tValues);
                         //                        Console.WriteLine(rvec.Rows);
 
 
@@ -163,7 +166,7 @@ namespace KinectArucoTracking
 
                         //                        rValues = new [] {rValues[0], rValues[1], rValues[2]};
 
-                        CvInvoke.Rodrigues(rvec.Row(0), rMat);
+                        CvInvoke.Rodrigues(rvec, rMat);
 
 //                        Mat r = new Mat();
 //                        for (int i = 0; i < rvec.Rows; i++)
@@ -193,8 +196,8 @@ namespace KinectArucoTracking
                             (float) row3[0], (float) row3[1], (float) row3[2], 0,
                             0, 0, 0, 1
                         );
-                        //rotation = rotation.CreateEulerFromMatrix(row1, row2, row3);
-                        //translation = Matrix.CreateTranslation((float)tValues[0], -(float)tValues[1], -(float)tValues[2]);
+                        rotation = rotation.CreateEulerFromMatrix(row1, row2, row3); // * Matrix.CreateRotationZ((float)Math.PI);
+                        translation = Matrix.CreateTranslation((float)tValues[0] + size / 2, -(float)tValues[1] + size / 2, -(float)tValues[2]);
                     }
                 }
 
@@ -206,7 +209,7 @@ namespace KinectArucoTracking
                     Vector3.Up);// Y up
 
 
-                projectionMatrix = Matrix.CreatePerspective(1, 1 / GraphicsDevice.Viewport.AspectRatio, 1f, 10000);
+                projectionMatrix = Matrix.CreatePerspective(1, 1 / GraphicsDevice.Viewport.AspectRatio, 1f, 100000);
 
 //                    MathHelper.ToRadians(45f), graphics.
 //                        GraphicsDevice.Viewport.AspectRatio,
@@ -214,7 +217,7 @@ namespace KinectArucoTracking
 //                projectionMatrix = Matrix.CreatePerspective(graphics.GraphicsDevice.Viewport.Width,
 //                    graphics.GraphicsDevice.Viewport.Height, 1f, 10000f);
 
-                Matrix scaling = Matrix.CreateScale(sizeHalf * (2));
+                Matrix scaling = Matrix.CreateScale(size);
 
 
                 worldMatrix =

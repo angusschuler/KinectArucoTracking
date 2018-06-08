@@ -39,8 +39,8 @@ namespace KinectArucoTracking
         private VectorOfInt _markerCounterPerFrame = new VectorOfInt();
         private Size _imageSize = Size.Empty;
 
-        int markersX = 4;
-        int markersY = 4;
+        int markersX = 8;
+        int markersY = 8;
         private float markersLength = 250f;//1780f; 
         private float markersSeparation = 100f;
 
@@ -55,26 +55,13 @@ namespace KinectArucoTracking
 
         }
 
-        private GridBoard _gridBoard;
-        private GridBoard ArucoBoard
-        {
-            get
-            {
-                if (_gridBoard == null)
-                {
-                    _gridBoard = new GridBoard(markersX, markersY, markersLength, markersSeparation, ArucoDictionary);
-                }
-                return _gridBoard;
-            }
-        }
-
         private CharucoBoard _board;
         private CharucoBoard board {
             get
             {
                 if (_board == null)
                 {
-                    _board = new CharucoBoard(markersX, markersY, 350, 250, ArucoDictionary);
+                    _board = new CharucoBoard(markersX, markersY, markersLength + 100, markersLength, ArucoDictionary);
                 }
                 return _board;
             }
@@ -155,7 +142,7 @@ namespace KinectArucoTracking
 
                     using (VectorOfInt ids = new VectorOfInt())
                     using (VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF())
-                    using (VectorOfVectorOfPointF charucoCorners = new VectorOfVectorOfPointF())
+                    using (VectorOfPointF charucoCorners = new VectorOfPointF())
                     using (VectorOfInt charucoIds = new VectorOfInt())
                     using (VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF())
                     {
@@ -173,11 +160,11 @@ namespace KinectArucoTracking
                                 //    _distCoeffs,
                                 //    9, 4, true, null, _detectorParameters);
                             }
-                            
 
-                           
 
-                            //ArucoInvoke.DrawDetectedMarkers(_frameCopy, corners, ids, new MCvScalar(0, 255, 0));
+
+
+                            ArucoInvoke.DrawDetectedMarkers(_frameCopy, corners, ids, new MCvScalar(0, 255, 0));
 
                             if (!_cameraMatrix.IsEmpty && !_distCoeffs.IsEmpty)
                             {
@@ -192,7 +179,22 @@ namespace KinectArucoTracking
                                     ArucoInvoke.DrawDetectedCornersCharuco(_frameCopy, charucoCorners, charucoIds, new MCvScalar(0, 255, 0));
                                     ArucoInvoke.EstimatePoseCharucoBoard(charucoCorners, charucoIds, board,
                                         _cameraMatrix, _distCoeffs, rvecs, tvecs);
+                                    Console.WriteLine(rvecs.Rows);
+                                    Console.WriteLine(tvecs.Rows);
+
+                                    for (int i = 0; i < charucoIds.Size; i++)
+                                    {
+                                        if (!rvecs.IsEmpty && !tvecs.IsEmpty)
+                                        {
+                                            ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvecs, tvecs,
+                                            markersLength * markersX * 0.5f);
+                                        }
+                                        
+                                    }
                                 }
+
+
+                               
 
                                 //for (int i = 0; i < ids.Size; i++)
                                 //{
@@ -212,8 +214,7 @@ namespace KinectArucoTracking
                                 //        //Console.WriteLine("Translation Capture: x:" + values[0] + ", y:" + values[1] + ", z:" + values[2]);
                                 //        //                                        if (ids[i] == 5)
 
-                                //        //ArucoInvoke.DrawAxis(_frameCopy, _cameraMatrix, _distCoeffs, rvec, tvec,
-                                //        //        markersLength * 0.5f);
+                                        
                                 //    }
                                 //}
                             }
@@ -232,7 +233,7 @@ namespace KinectArucoTracking
                                 {
 
                                     ArucoInvoke.CalibrateCameraAruco(_allCorners, _allIds, _markerCounterPerFrame,
-                                        ArucoBoard,
+                                        board,
                                         _imageSize,
                                         _cameraMatrix, _distCoeffs, null, null, CalibType.Default,
                                         new MCvTermCriteria(30, double.Epsilon));
